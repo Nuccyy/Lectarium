@@ -1,0 +1,1019 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Lectarium">
+<title>Lectarium</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#080808;--bg2:#111111;--bg3:#1A1A1A;--bg4:#222222;
+  --fg:#F0EDE8;--fg2:#A8A49E;--fg3:#5A5652;
+  --lime:#C8FF57;--lime2:#A8E040;
+  --red:#FF4444;--red-bg:rgba(255,68,68,0.1);
+  --border:rgba(255,255,255,0.08);--border2:rgba(255,255,255,0.15);
+  --border-lime:rgba(200,255,87,0.3);
+  --shadow:0 4px 24px rgba(0,0,0,0.4);
+  --shadow-lime:0 0 24px rgba(200,255,87,0.15);
+  --safe-top:env(safe-area-inset-top,44px);
+  --safe-bot:env(safe-area-inset-bottom,20px);
+  --syne:'Syne',sans-serif;
+  --dm:'DM Sans',sans-serif;
+  --r:8px;--rl:14px;--rxl:20px;
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--fg);font-family:var(--dm)}
+
+/* LOADING */
+#load{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100dvh;background:var(--bg);gap:20px}
+.load-logo{font-family:var(--syne);font-size:42px;font-weight:800;color:var(--fg);letter-spacing:-2px}
+.load-logo span{color:var(--lime)}
+.load-bar{width:120px;height:2px;background:var(--bg3);border-radius:1px;overflow:hidden}
+.load-bar::after{content:'';display:block;height:100%;background:var(--lime);animation:lb 1.4s ease-in-out infinite}
+@keyframes lb{0%{width:0;margin-left:0}50%{width:60%;margin-left:20%}100%{width:0;margin-left:100%}}
+
+/* AUTH */
+#auth{display:none;flex-direction:column;align-items:center;justify-content:center;height:100dvh;padding:24px;background:var(--bg)}
+.auth-mark{font-family:var(--syne);font-size:11px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:var(--lime);margin-bottom:16px}
+.auth-title{font-family:var(--syne);font-size:38px;font-weight:800;color:var(--fg);letter-spacing:-1.5px;margin-bottom:6px;text-align:center;line-height:1}
+.auth-sub{font-size:14px;color:var(--fg3);margin-bottom:40px;text-align:center}
+.auth-card{width:100%;max-width:360px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--rxl);padding:28px}
+.auth-tabs{display:flex;background:var(--bg3);border-radius:var(--r);padding:3px;margin-bottom:24px}
+.atab{flex:1;padding:9px;border-radius:calc(var(--r) - 2px);border:none;background:none;font-family:var(--syne);font-size:13px;font-weight:600;color:var(--fg3);cursor:pointer;transition:all .2s;letter-spacing:.3px}
+.atab.active{background:var(--bg4);color:var(--fg)}
+.al{font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--fg3);margin-bottom:6px;display:block;font-family:var(--syne)}
+.ai{width:100%;padding:13px 15px;border:1px solid var(--border);border-radius:var(--r);background:var(--bg3);color:var(--fg);font-family:var(--dm);font-size:15px;margin-bottom:12px;-webkit-appearance:none;transition:all .2s}
+.ai:focus{outline:none;border-color:var(--lime);background:var(--bg4)}
+.ai::placeholder{color:var(--fg3)}
+.auth-btn{width:100%;padding:14px;border-radius:var(--r);border:none;background:var(--lime);color:var(--bg);font-family:var(--syne);font-size:15px;font-weight:700;cursor:pointer;transition:all .2s;letter-spacing:.3px}
+.auth-btn:active{transform:scale(.98);background:var(--lime2)}
+.amsg{font-size:13px;margin-top:10px;text-align:center;display:none}
+.amsg.err{color:var(--red)}.amsg.ok{color:var(--lime)}
+
+/* APP */
+.app{display:flex;flex-direction:column;height:100dvh;overflow:hidden}
+
+/* TOPBAR */
+.topbar{padding:calc(var(--safe-top) + 6px) 18px 12px;background:var(--bg);display:flex;align-items:center;gap:12px;flex-shrink:0;border-bottom:1px solid var(--border)}
+.brand-name{font-family:var(--syne);font-size:20px;font-weight:800;color:var(--fg);letter-spacing:-0.8px;flex:1}
+.brand-name span{color:var(--lime)}
+.brand-ctx{font-size:11px;color:var(--fg3);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px}
+.pip{width:6px;height:6px;border-radius:50%;background:#3A3A3A;flex-shrink:0;transition:background .3s}
+.pip.ok{background:var(--lime)}.pip.busy{background:#FFB800;animation:pp 1s infinite}.pip.err{background:var(--red)}
+@keyframes pp{0%,100%{opacity:1}50%{opacity:.3}}
+.tbtn{width:38px;height:38px;border-radius:var(--r);border:1px solid var(--border);background:var(--bg2);color:var(--fg2);font-size:15px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:all .2s}
+.tbtn:active{background:var(--bg3)}
+.av{width:36px;height:36px;border-radius:50%;background:var(--lime);display:flex;align-items:center;justify-content:center;font-family:var(--syne);font-size:13px;font-weight:800;color:var(--bg);cursor:pointer;flex-shrink:0}
+
+/* SCREENS */
+.screen{display:none;flex:1;flex-direction:column;overflow:hidden}
+.screen.active{display:flex}
+.scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.scroll::-webkit-scrollbar{display:none}
+
+/* BOTTOM NAV */
+.bnav{display:flex;padding:8px 0 calc(var(--safe-bot) + 4px);background:var(--bg);border-top:1px solid var(--border);flex-shrink:0}
+.ntab{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 2px;border:none;background:none;cursor:pointer;transition:all .2s}
+.ntab:active{opacity:.6}
+.ni{font-size:18px;color:var(--fg3);transition:all .2s;line-height:1}
+.nl{font-size:9px;color:var(--fg3);font-family:var(--syne);font-weight:600;letter-spacing:.5px;text-transform:uppercase;transition:all .2s}
+.ntab.active .ni,.ntab.active .nl{color:var(--lime)}
+.ntab.active .ni{transform:translateY(-1px)}
+
+/* FAB */
+.fab{position:fixed;bottom:calc(var(--safe-bot) + 72px);right:18px;width:54px;height:54px;border-radius:50%;background:var(--lime);color:var(--bg);font-size:26px;border:none;cursor:pointer;display:none;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(200,255,87,0.4);z-index:50;transition:transform .2s;font-family:var(--syne);font-weight:700}
+.fab:active{transform:scale(.92)}.fab.show{display:flex}
+
+/* SCAN FAB */
+.scan-fab{position:fixed;bottom:calc(var(--safe-bot) + 138px);right:18px;width:46px;height:46px;border-radius:50%;background:var(--bg2);color:var(--lime);font-size:20px;border:1px solid var(--border-lime);cursor:pointer;display:none;align-items:center;justify-content:center;box-shadow:var(--shadow-lime);z-index:50;transition:transform .2s}
+.scan-fab:active{transform:scale(.92)}.scan-fab.show{display:flex}
+
+/* BOOKS */
+.books-wrap{padding:16px;display:flex;flex-direction:column;gap:12px}
+.book-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden;display:flex;min-height:110px;cursor:pointer;transition:all .2s;position:relative}
+.book-card:active{transform:scale(.98);border-color:var(--border2)}
+.book-spine{width:4px;min-width:4px;flex-shrink:0}
+.book-cover{width:75px;min-width:75px;background:var(--bg3);display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative}
+.book-cover img{width:100%;height:100%;object-fit:cover}
+.book-cover-ph{font-family:var(--syne);font-size:26px;font-weight:800;color:var(--fg3)}
+.book-info{flex:1;padding:14px 12px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.book-title{font-family:var(--syne);font-size:15px;font-weight:700;color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.3px}
+.book-author{font-size:12px;color:var(--fg3)}
+.book-cat{font-size:10px;color:var(--fg3);font-family:var(--syne);font-weight:600;letter-spacing:.5px;text-transform:uppercase;margin-top:2px}
+.book-prog-wrap{margin-top:auto;padding-top:8px}
+.book-prog-row{display:flex;justify-content:space-between;font-size:10px;color:var(--fg3);margin-bottom:4px;font-family:var(--syne);font-weight:600}
+.bpb{height:2px;background:var(--bg3);border-radius:1px;overflow:hidden}
+.bpf{height:100%;background:var(--lime);border-radius:1px;transition:width .5s}
+.book-nbadge{position:absolute;top:10px;right:10px;background:rgba(200,255,87,0.12);border:1px solid var(--border-lime);color:var(--lime);font-size:10px;padding:2px 7px;border-radius:20px;font-family:var(--syne);font-weight:600}
+.book-del-btn{position:absolute;bottom:10px;right:10px;background:var(--red-bg);color:var(--red);border:1px solid rgba(255,68,68,0.2);border-radius:6px;padding:3px 8px;font-size:10px;font-family:var(--syne);font-weight:600;cursor:pointer;opacity:0;transition:opacity .2s}
+.book-card:hover .book-del-btn{opacity:1}
+.btn-add-book{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:16px;border-radius:var(--rl);border:1px dashed var(--border2);background:transparent;color:var(--fg3);font-size:14px;font-family:var(--syne);font-weight:600;cursor:pointer;letter-spacing:.3px;transition:all .2s}
+.btn-add-book:active{background:var(--bg2);color:var(--fg)}
+
+/* BACK BAR */
+.bbar{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--bg)}
+.bbtn{font-size:24px;color:var(--lime);border:none;background:none;cursor:pointer;padding:0;line-height:1;font-family:var(--syne)}
+.btitle{font-family:var(--syne);font-size:15px;font-weight:700;color:var(--fg);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.3px}
+
+/* BOOK DETAIL */
+.book-dh{background:var(--bg2);padding:20px 18px;border-bottom:1px solid var(--border)}
+.book-dr{display:flex;gap:16px;align-items:flex-start}
+.book-dc{width:85px;min-width:85px;height:122px;border-radius:var(--r);overflow:hidden;background:var(--bg3);box-shadow:var(--shadow)}
+.book-dc img{width:100%;height:100%;object-fit:cover}
+.book-dc-ph{display:flex;align-items:center;justify-content:center;height:100%;font-family:var(--syne);font-size:30px;font-weight:800;color:var(--fg3)}
+.book-dm{flex:1;min-width:0}
+.book-dt{font-family:var(--syne);font-size:19px;font-weight:800;color:var(--fg);letter-spacing:-.5px;line-height:1.2;margin-bottom:4px}
+.book-da{font-size:13px;color:var(--fg2);margin-bottom:3px}
+.book-dcat{font-size:10px;font-family:var(--syne);font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--lime);margin-bottom:12px}
+.page-wrap{display:inline-flex;align-items:center;gap:6px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:5px 12px 5px 8px}
+.pl{font-size:11px;color:var(--fg3);font-family:var(--syne);font-weight:600}
+.pi{width:50px;border:none;background:transparent;font-size:16px;font-family:var(--syne);font-weight:700;color:var(--lime);text-align:center;-webkit-appearance:none}
+.pi:focus{outline:none}
+.pt{font-size:12px;color:var(--fg3)}
+.book-dprog{padding:16px 18px;border-bottom:1px solid var(--border);background:var(--bg)}
+.pct-big{font-family:var(--syne);font-size:32px;font-weight:800;color:var(--lime);letter-spacing:-1px}
+.pct-lbl{font-size:11px;color:var(--fg3);font-family:var(--syne);font-weight:600;letter-spacing:.5px;text-transform:uppercase}
+.pbar-full{height:4px;background:var(--bg3);border-radius:2px;overflow:hidden;margin-top:10px}
+.pbar-fill{height:100%;background:var(--lime);border-radius:2px;transition:width .5s}
+.book-ddesc{padding:16px 18px;border-bottom:1px solid var(--border)}
+.dl{font-size:10px;font-family:var(--syne);font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--fg3);margin-bottom:8px}
+.dt{font-size:14px;color:var(--fg2);line-height:1.7}
+.de{font-size:13px;color:var(--fg3);font-style:italic}
+.btn-edit{margin-top:8px;padding:6px 12px;border-radius:var(--r);border:1px solid var(--border);background:transparent;color:var(--fg3);font-size:11px;font-family:var(--syne);font-weight:600;cursor:pointer;letter-spacing:.5px;text-transform:uppercase;transition:all .2s}
+.btn-edit:active{background:var(--bg2)}
+
+/* SECTIONS */
+.secs{padding:16px}
+.sec-block{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);margin-bottom:10px;overflow:hidden;transition:border-color .2s}
+.sec-block:has(.sec-items:not([style*="display:none"])){border-color:var(--border2)}
+.sec-head{display:flex;align-items:center;gap:10px;padding:14px;cursor:pointer;transition:background .15s;border-left:3px solid transparent}
+.sec-head:active{background:var(--bg3)}
+.sec-ico{font-size:16px;width:24px;text-align:center}
+.sec-name{font-family:var(--syne);font-size:14px;font-weight:700;color:var(--fg);flex:1;letter-spacing:-.2px}
+.sec-cnt{font-size:11px;color:var(--bg);font-family:var(--syne);font-weight:700;background:var(--lime);padding:2px 8px;border-radius:20px}
+.sec-chev{font-size:12px;color:var(--fg3);transition:transform .2s;display:inline-block}
+.sec-chev.open{transform:rotate(180deg)}
+.sec-items-wrap{border-top:1px solid var(--border)}
+.sec-item{padding:13px 14px;border-bottom:1px solid var(--border);animation:sif .25s ease;position:relative}
+.sec-item:last-child{border-bottom:none}
+@keyframes sif{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.sit-quote{font-size:14px;color:var(--fg2);border-left:2px solid var(--lime);padding-left:10px;margin-bottom:6px;line-height:1.6;font-style:italic}
+.sit-text{font-size:14px;color:var(--fg);line-height:1.65}
+.sit-page{font-size:10px;color:var(--fg3);margin-top:4px;font-family:var(--syne);font-weight:600}
+.sit-del{position:absolute;top:10px;right:10px;background:var(--red-bg);color:var(--red);border:1px solid rgba(255,68,68,0.2);border-radius:6px;padding:3px 8px;font-size:10px;font-family:var(--syne);font-weight:600;cursor:pointer}
+.sec-add{display:flex;align-items:center;gap:8px;padding:12px 14px;background:transparent;cursor:pointer;border:none;width:100%;font-family:var(--syne);font-size:13px;font-weight:600;color:var(--lime);transition:background .15s;border-top:1px solid var(--border);letter-spacing:.2px}
+.sec-add:active{background:var(--bg3)}
+.sec-notes .sec-head{border-left-color:#5ABABA}
+.sec-citations .sec-head{border-left-color:var(--lime)}
+.sec-questions .sec-head{border-left-color:#FF6B6B}
+.sec-lexique .sec-head{border-left-color:#B4A0FF}
+.sec-auteurs .sec-head{border-left-color:#FFB347}
+.sec-livres .sec-head{border-left-color:#87CEEB}
+.sec-inspirations .sec-head{border-left-color:#FF8FA3}
+
+/* SHEETS */
+.sht-bg{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:150;display:none;align-items:flex-end;backdrop-filter:blur(8px)}
+.sht-bg.open{display:flex}
+.sht{width:100%;background:var(--bg2);border-radius:var(--rxl) var(--rxl) 0 0;padding:0 0 calc(var(--safe-bot) + 8px);max-height:92dvh;overflow-y:auto;animation:sUp .28s cubic-bezier(.32,.72,0,1)}
+@keyframes sUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.sht-drag{width:36px;height:3px;background:var(--bg4);border-radius:2px;margin:12px auto 0}
+.sht-hdr{display:flex;align-items:center;gap:10px;padding:16px 18px 14px;border-bottom:1px solid var(--border)}
+.sht-ico{font-size:18px}
+.sht-title{font-family:var(--syne);font-size:17px;font-weight:700;color:var(--fg);flex:1;letter-spacing:-.3px}
+.sht-body{padding:16px 18px}
+.sl{font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--fg3);margin-bottom:6px;display:block;font-family:var(--syne)}
+.si{width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:var(--r);background:var(--bg3);color:var(--fg);font-family:var(--dm);font-size:15px;margin-bottom:12px;-webkit-appearance:none;transition:all .2s}
+.si:focus{outline:none;border-color:var(--lime);background:var(--bg4)}
+.si::placeholder{color:var(--fg3)}
+textarea.si{resize:none;min-height:80px;line-height:1.6}
+.s2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn-sv{width:100%;padding:15px;border-radius:var(--r);border:none;background:var(--lime);color:var(--bg);font-size:16px;font-family:var(--syne);font-weight:700;cursor:pointer;margin-top:4px;transition:all .2s}
+.btn-sv:active{transform:scale(.98);background:var(--lime2)}
+
+/* COVER */
+.czone{width:100%;height:110px;border:1px dashed var(--border2);border-radius:var(--r);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;cursor:pointer;background:var(--bg3);margin-bottom:12px;transition:all .2s;position:relative;overflow:hidden}
+.czone:active{background:var(--bg4)}
+.czone img.cprev{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.cov-ov{position:absolute;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .2s}
+.czone:active .cov-ov{opacity:1}
+.clbl{font-size:13px;color:var(--fg3);font-family:var(--dm)}
+.csrow{display:flex;gap:8px;margin-bottom:12px}
+.cs-inp{flex:1;padding:10px 13px;border:1px solid var(--border);border-radius:var(--r);background:var(--bg3);color:var(--fg);font-family:var(--dm);font-size:14px;-webkit-appearance:none}
+.cs-inp:focus{outline:none;border-color:var(--lime)}
+.btn-cs{padding:10px 14px;border-radius:var(--r);border:1px solid var(--border-lime);background:rgba(200,255,87,0.08);color:var(--lime);font-size:13px;font-family:var(--syne);font-weight:600;cursor:pointer;white-space:nowrap}
+.cresults{display:flex;gap:8px;overflow-x:auto;padding-bottom:8px;margin-bottom:12px}
+.cresults::-webkit-scrollbar{display:none}
+.cthumb{width:56px;min-width:56px;height:84px;border-radius:6px;overflow:hidden;cursor:pointer;border:2px solid transparent;transition:all .2s;box-shadow:var(--shadow)}
+.cthumb:active{transform:scale(.95)}.cthumb.sel{border-color:var(--lime)}
+.cthumb img{width:100%;height:100%;object-fit:cover}
+
+/* IA */
+.ia-top{padding:20px 18px 16px;border-bottom:1px solid var(--border);background:var(--bg2)}
+.ia-tt{font-family:var(--syne);font-size:22px;font-weight:800;color:var(--fg);letter-spacing:-1px;margin-bottom:4px}
+.ia-ts{font-size:13px;color:var(--fg3)}
+.ia-ctx{margin:14px 16px;background:rgba(200,255,87,0.08);border:1px solid var(--border-lime);border-radius:var(--r);padding:10px 14px;font-size:13px;color:var(--lime);font-family:var(--syne);font-weight:600}
+.ak-box{margin:0 16px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);padding:14px}
+.ak-l{font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--fg3);margin-bottom:8px;display:block;font-family:var(--syne)}
+.ak-row{display:flex;gap:8px}
+.ak-i{flex:1;padding:10px 12px;border:1px solid var(--border);border-radius:var(--r);background:var(--bg3);color:var(--fg);font-size:14px;font-family:var(--dm);-webkit-appearance:none}
+.ak-i:focus{outline:none;border-color:var(--lime)}
+.btn-aok{padding:10px 16px;border-radius:var(--r);border:1px solid var(--border-lime);background:rgba(200,255,87,0.08);color:var(--lime);font-size:13px;font-family:var(--syne);font-weight:600;cursor:pointer}
+.ai-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 16px 16px}
+.btn-ai{padding:16px 12px;border-radius:var(--rl);border:1px solid var(--border);background:var(--bg2);color:var(--fg2);font-size:13px;font-family:var(--dm);cursor:pointer;text-align:left;display:flex;flex-direction:column;gap:6px;transition:all .2s}
+.btn-ai:active{transform:scale(.97);background:var(--bg3);border-color:var(--border2)}
+.bai-ico{font-size:20px}
+.bai-lbl{font-size:12px;line-height:1.3;color:var(--fg);font-family:var(--syne);font-weight:600}
+.ai-think{text-align:center;padding:20px;color:var(--fg3);font-size:13px;font-family:var(--syne);font-weight:600;display:none;letter-spacing:.5px;text-transform:uppercase}
+.ai-rw{margin:0 16px 16px}
+.ai-rc{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);padding:18px}
+.ai-rt{font-family:var(--syne);font-size:16px;font-weight:700;color:var(--fg);margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border);letter-spacing:-.3px}
+.ai-rb{font-size:14px;color:var(--fg2);line-height:1.8}
+
+/* SCAN */
+.scan-result-item{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:12px;margin-bottom:8px;position:relative}
+.sri-tag{display:inline-block;font-size:10px;font-family:var(--syne);font-weight:700;letter-spacing:.5px;text-transform:uppercase;padding:2px 8px;border-radius:4px;margin-bottom:6px}
+.sri-notes{background:rgba(90,186,186,0.15);color:#5ABABA}
+.sri-citations{background:rgba(200,255,87,0.15);color:var(--lime)}
+.sri-questions{background:rgba(255,107,107,0.15);color:#FF6B6B}
+.sri-lexique{background:rgba(180,160,255,0.15);color:#B4A0FF}
+.sri-auteurs{background:rgba(255,179,71,0.15);color:#FFB347}
+.sri-livres{background:rgba(135,206,235,0.15);color:#87CEEB}
+.sri-inspirations{background:rgba(255,143,163,0.15);color:#FF8FA3}
+.sri-quote{font-size:14px;color:var(--lime);font-style:italic;margin-bottom:4px}
+.sri-text{font-size:13px;color:var(--fg2);line-height:1.6}
+.sri-del{position:absolute;top:8px;right:8px;background:var(--red-bg);color:var(--red);border:none;border-radius:4px;padding:2px 7px;font-size:10px;cursor:pointer;font-family:var(--syne);font-weight:600}
+.scan-book-sel{width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:var(--r);background:var(--bg3);color:var(--fg);font-family:var(--dm);font-size:15px;margin-bottom:12px;-webkit-appearance:none;cursor:pointer}
+.scan-book-sel:focus{outline:none;border-color:var(--lime)}
+.scan-preview{width:100%;max-height:200px;object-fit:contain;border-radius:var(--r);margin-bottom:12px;border:1px solid var(--border)}
+.scan-loading{text-align:center;padding:32px;color:var(--fg3);font-family:var(--syne);font-size:13px;font-weight:600;letter-spacing:.5px;text-transform:uppercase}
+.scan-step{font-size:12px;color:var(--lime);font-family:var(--syne);font-weight:600;letter-spacing:.5px;text-transform:uppercase;margin-bottom:10px}
+
+/* STATS */
+.sw{padding:16px;display:flex;flex-direction:column;gap:12px}
+.sg{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.sc{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);padding:16px;text-align:center}
+.sn{font-family:var(--syne);font-size:36px;font-weight:800;color:var(--lime);letter-spacing:-1px;line-height:1}
+.sl2{font-size:11px;color:var(--fg3);margin-top:4px;font-family:var(--syne);font-weight:600;letter-spacing:.5px;text-transform:uppercase}
+.bc{background:var(--bg2);border:1px solid var(--border);border-radius:var(--rl);padding:16px}
+.bt{font-family:var(--syne);font-size:16px;font-weight:700;color:var(--fg);margin-bottom:14px;letter-spacing:-.3px}
+.brw{display:flex;align-items:center;gap:10px;margin-bottom:11px}
+.brl{font-size:12px;color:var(--fg2);width:84px;flex-shrink:0;font-family:var(--syne);font-weight:600}
+.brt{flex:1;height:6px;background:var(--bg3);border-radius:3px;overflow:hidden}
+.brf{height:100%;border-radius:3px;transition:width .6s ease}
+.brn{font-size:11px;color:var(--fg3);width:22px;text-align:right;font-family:var(--syne);font-weight:600}
+
+/* PROFILE */
+.prof-bg{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;display:none;align-items:flex-end;backdrop-filter:blur(8px)}
+.prof-bg.open{display:flex}
+.prof-sht{width:100%;background:var(--bg2);border-radius:var(--rxl) var(--rxl) 0 0;padding:0 0 calc(var(--safe-bot) + 16px);animation:sUp .28s cubic-bezier(.32,.72,0,1)}
+.prof-top{text-align:center;padding:20px 18px 16px;border-bottom:1px solid var(--border)}
+.prof-av{width:64px;height:64px;border-radius:50%;background:var(--lime);display:flex;align-items:center;justify-content:center;font-family:var(--syne);font-size:26px;font-weight:800;color:var(--bg);margin:0 auto 12px}
+.prof-em{font-family:var(--syne);font-size:15px;font-weight:600;color:var(--fg);margin-bottom:3px}
+.prof-si{font-size:12px;color:var(--fg3)}
+.prof-body{padding:16px 18px 0}
+.btn-tm{width:100%;padding:14px;border-radius:var(--r);border:1px solid var(--border);background:var(--bg3);color:var(--fg2);font-size:14px;font-family:var(--syne);font-weight:600;cursor:pointer;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:8px;letter-spacing:.3px}
+.btn-lo{width:100%;padding:14px;border-radius:var(--r);border:1px solid rgba(255,68,68,0.3);background:var(--red-bg);color:var(--red);font-size:14px;font-family:var(--syne);font-weight:600;cursor:pointer;letter-spacing:.3px}
+
+/* EMPTY */
+.empty{text-align:center;padding:60px 24px;color:var(--fg3)}
+.ei{font-size:40px;margin-bottom:12px;opacity:.5}
+.et{font-size:14px;line-height:1.7;color:var(--fg3);font-family:var(--syne);font-weight:500}
+
+/* TOAST */
+.toast{position:fixed;bottom:calc(var(--safe-bot) + 80px);left:50%;transform:translateX(-50%) translateY(16px);background:var(--fg);color:var(--bg);padding:10px 20px;border-radius:20px;font-size:13px;font-family:var(--syne);font-weight:600;opacity:0;transition:all .25s;z-index:400;white-space:nowrap;pointer-events:none;box-shadow:var(--shadow)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+
+<div id="load">
+  <div class="load-logo">Lect<span>a</span>rium</div>
+  <div class="load-bar"></div>
+</div>
+
+<div id="auth">
+  <div class="auth-mark">✦ Application</div>
+  <div class="auth-title">Lectarium</div>
+  <div class="auth-sub">Votre carnet de lecture intelligent</div>
+  <div class="auth-card">
+    <div class="auth-tabs">
+      <button class="atab active" id="tab-login" onclick="switchAuth('login')">Connexion</button>
+      <button class="atab" id="tab-signup" onclick="switchAuth('signup')">Créer un compte</button>
+    </div>
+    <label class="al">Email</label>
+    <input class="ai" id="a-email" type="email" placeholder="votre@email.com" autocomplete="email">
+    <label class="al">Mot de passe</label>
+    <input class="ai" id="a-pass" type="password" placeholder="••••••••" autocomplete="current-password">
+    <button class="auth-btn" id="auth-btn" onclick="doAuth()">Se connecter →</button>
+    <div class="amsg err" id="auth-err"></div>
+    <div class="amsg ok" id="auth-ok"></div>
+  </div>
+</div>
+
+<div class="app" id="app" style="display:none">
+  <div class="topbar">
+    <div style="flex:1;min-width:0">
+      <div class="brand-name">Lect<span>a</span>rium <span class="pip" id="pip" style="display:inline-block;vertical-align:middle"></span></div>
+      <div class="brand-ctx" id="ctx">ma bibliothèque</div>
+    </div>
+    <button class="tbtn" onclick="toggleTheme()">◑</button>
+    <div class="av" id="av-btn" onclick="openProf()">?</div>
+  </div>
+
+  <div class="screen active" id="screen-biblio">
+    <div class="scroll" style="padding:0"><div class="books-wrap" id="books-wrap"></div></div>
+  </div>
+
+  <div class="screen" id="screen-book">
+    <div class="bbar">
+      <button class="bbtn" onclick="closeBook()">‹</button>
+      <div class="btitle" id="book-btitle">—</div>
+    </div>
+    <div class="scroll" style="padding:0"><div id="book-content"></div></div>
+  </div>
+
+  <div class="screen" id="screen-ia">
+    <div class="scroll" style="padding:0">
+      <div class="ia-top"><div class="ia-tt">Assistant IA</div><div class="ia-ts">Analyse & approfondissement</div></div>
+      <div class="ak-box"><label class="ak-l">Clé API Anthropic</label><div class="ak-row"><input class="ak-i" id="api-key" type="password" placeholder="sk-ant-…"><button class="btn-aok" onclick="saveKey()">Sauver</button></div></div>
+      <div class="ia-ctx" id="ia-ctx">Analyse : toutes mes notes</div>
+      <div class="ai-grid">
+        <button class="btn-ai" onclick="aiDo('résumé')"><span class="bai-ico">≡</span><span class="bai-lbl">Résumer mes notes</span></button>
+        <button class="btn-ai" onclick="aiDo('thèmes')"><span class="bai-ico">◈</span><span class="bai-lbl">Dégager les thèmes</span></button>
+        <button class="btn-ai" onclick="aiDo('questions')"><span class="bai-ico">◌</span><span class="bai-lbl">Approfondir questions</span></button>
+        <button class="btn-ai" onclick="aiDo('fiche')"><span class="bai-ico">□</span><span class="bai-lbl">Fiche de lecture</span></button>
+        <button class="btn-ai" onclick="aiDo('critique')"><span class="bai-ico">◆</span><span class="bai-lbl">Analyse critique</span></button>
+        <button class="btn-ai" onclick="aiDo('lexique')"><span class="bai-ico">α</span><span class="bai-lbl">Enrichir le lexique</span></button>
+      </div>
+      <div class="ai-think" id="ai-think">Analyse en cours…</div>
+      <div class="ai-rw" id="ai-result"></div>
+    </div>
+  </div>
+
+  <div class="screen" id="screen-stats">
+    <div class="scroll" style="padding:0"><div class="sw" id="sw"></div></div>
+  </div>
+
+  <div class="bnav">
+    <button class="ntab active" id="nav-biblio" onclick="setScreen('biblio')"><span class="ni">📚</span><span class="nl">Biblio</span></button>
+    <button class="ntab" id="nav-ia" onclick="setScreen('ia')"><span class="ni">✦</span><span class="nl">IA</span></button>
+    <button class="ntab" id="nav-stats" onclick="setScreen('stats')"><span class="ni">📊</span><span class="nl">Stats</span></button>
+  </div>
+</div>
+
+<button class="fab" id="fab" onclick="openAddBook()">+</button>
+<button class="scan-fab" id="scan-fab" onclick="openScan()" title="Scanner une page">📷</button>
+
+<!-- ADD BOOK -->
+<div class="sht-bg" id="add-book-bg" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="sht">
+    <div class="sht-drag"></div>
+    <div class="sht-hdr"><span class="sht-ico">📖</span><span class="sht-title">Nouvelle œuvre</span></div>
+    <div class="sht-body">
+      <label class="sl">Image de couverture</label>
+      <div class="czone" id="czone" onclick="document.getElementById('cfile').click()">
+        <span style="font-size:22px">🖼</span><span class="clbl">Appuyez pour une photo</span>
+        <div class="cov-ov"><span style="color:white;font-size:22px">✎</span></div>
+      </div>
+      <input type="file" id="cfile" accept="image/*" style="display:none" onchange="handleCovFile(event)">
+      <label class="sl">Rechercher couverture en ligne</label>
+      <div class="csrow"><input class="cs-inp" id="cov-search" placeholder="Titre du livre…"><button class="btn-cs" onclick="searchCover()">Chercher</button></div>
+      <div class="cresults" id="cresults" style="display:none"></div>
+      <label class="sl">Titre *</label>
+      <input class="si" id="w-title" placeholder="Ex : Éloges du Dépassement">
+      <label class="sl">Auteur(s) *</label>
+      <input class="si" id="w-author" placeholder="Ex : Pesquet, Klein">
+      <label class="sl">Catégorie</label>
+      <input class="si" id="w-cat" placeholder="Essai, Roman, Philosophie…">
+      <label class="sl">Description</label>
+      <textarea class="si" id="w-desc" placeholder="Résumé ou note personnelle…" style="min-height:70px"></textarea>
+      <div class="s2">
+        <div><label class="sl">Pages</label><input class="si" id="w-pages" type="number" placeholder="280"></div>
+        <div><label class="sl">Année</label><input class="si" id="w-year" type="number" placeholder="2023"></div>
+      </div>
+      <button class="btn-sv" onclick="addBook()">Ajouter →</button>
+    </div>
+  </div>
+</div>
+
+<!-- MINI SHEET -->
+<div class="sht-bg" id="mini-bg" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="sht">
+    <div class="sht-drag"></div>
+    <div class="sht-hdr"><span class="sht-ico" id="mini-ico">📝</span><span class="sht-title" id="mini-title">Ajouter</span></div>
+    <div class="sht-body"><div id="mini-fields"></div><button class="btn-sv" onclick="saveMiniNote()">Sauvegarder →</button></div>
+  </div>
+</div>
+
+<!-- DESC EDIT -->
+<div class="sht-bg" id="desc-bg" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="sht">
+    <div class="sht-drag"></div>
+    <div class="sht-hdr"><span class="sht-ico">✏️</span><span class="sht-title">Description</span></div>
+    <div class="sht-body"><textarea class="si" id="desc-inp" placeholder="Résumé, thèmes, contexte…" style="min-height:120px"></textarea><button class="btn-sv" onclick="saveDesc()">Sauvegarder →</button></div>
+  </div>
+</div>
+
+<!-- SCAN SHEET -->
+<div class="sht-bg" id="scan-bg" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="sht">
+    <div class="sht-drag"></div>
+    <div class="sht-hdr"><span class="sht-ico">📷</span><span class="sht-title">Scanner une page</span></div>
+    <div class="sht-body" id="scan-body">
+      <label class="sl">Livre en cours</label>
+      <select class="scan-book-sel" id="scan-book-sel"></select>
+      <label class="sl">Photo de la page</label>
+      <div class="czone" id="scan-zone" onclick="document.getElementById('scan-file').click()">
+        <span style="font-size:22px">📸</span><span class="clbl">Prendre une photo de la page</span>
+        <div class="cov-ov"><span style="color:white;font-size:22px">📷</span></div>
+      </div>
+      <input type="file" id="scan-file" accept="image/*" capture="environment" style="display:none" onchange="handleScanFile(event)">
+      <button class="btn-sv" id="scan-analyze-btn" onclick="analyzeScan()" style="display:none">Analyser avec l'IA →</button>
+      <div id="scan-results-area"></div>
+      <button class="btn-sv" id="scan-save-all-btn" onclick="saveAllScanResults()" style="display:none;margin-top:8px">Tout sauvegarder →</button>
+    </div>
+  </div>
+</div>
+
+<!-- PROFILE -->
+<div class="prof-bg" id="prof-bg" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="prof-sht">
+    <div class="sht-drag"></div>
+    <div class="prof-top">
+      <div class="prof-av" id="prof-av">?</div>
+      <div class="prof-em" id="prof-em">—</div>
+      <div class="prof-si" id="prof-si">—</div>
+    </div>
+    <div class="prof-body">
+      <button class="btn-tm" onclick="toggleTheme()">◑ Mode sombre / clair</button>
+      <button class="btn-lo" onclick="doLogout()">Se déconnecter</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SURL='https://qykytdgsksqsgmwoeeul.supabase.co';
+const SKEY='sb_publishable_k4zJPlcJKmhatuRXdN9HTg_QXqdCBJt';
+
+// PWA FIX: explicit localStorage storage for session persistence
+const sb=supabase.createClient(SURL,SKEY,{
+  auth:{
+    storage:window.localStorage,
+    persistSession:true,
+    autoRefreshToken:true,
+    detectSessionInUrl:false
+  }
+});
+
+let books=[],notes=[],user=null,apiKey='',authMode='login';
+let currentBookId=null,currentSection=null,selectedCoverUrl=null,coverDataUrl=null;
+let scanImageBase64=null,scanBookId=null,scanResults=[];
+
+const SECTIONS=[
+  {id:'notes',name:'Notes',ico:'📝',fields:['text','page']},
+  {id:'citations',name:'Citations',ico:'❝',fields:['quote','text','page']},
+  {id:'questions',name:'Questions',ico:'◌',fields:['text','page']},
+  {id:'lexique',name:'Lexique',ico:'α',fields:['quote','text']},
+  {id:'auteurs',name:'Auteurs cités',ico:'👤',fields:['quote','text']},
+  {id:'livres',name:'Livres cités',ico:'📚',fields:['quote','text']},
+  {id:'inspirations',name:'Inspirations',ico:'✦',fields:['text','page']},
+];
+
+const SPINE=['#C8FF57','#5ABABA','#B4A0FF','#FF6B6B','#FFB347','#87CEEB','#FF8FA3'];
+
+async function init(){
+  const th=localStorage.getItem('lect_th')||'dark';
+  document.documentElement.setAttribute('data-theme',th);
+  apiKey=localStorage.getItem('lect_key')||'';
+  if(apiKey) document.getElementById('api-key').value=apiKey;
+
+  try{
+    const {data:{session}}=await sb.auth.getSession();
+    document.getElementById('load').style.display='none';
+    if(session){user=session.user;showApp();await loadData();}
+    else document.getElementById('auth').style.display='flex';
+  }catch(e){
+    document.getElementById('load').style.display='none';
+    document.getElementById('auth').style.display='flex';
+  }
+
+  sb.auth.onAuthStateChange(async(ev,session)=>{
+    if(ev==='SIGNED_IN'&&session){
+      user=session.user;
+      document.getElementById('auth').style.display='none';
+      showApp();await loadData();
+    }else if(ev==='SIGNED_OUT'){
+      user=null;books=[];notes=[];
+      document.getElementById('app').style.display='none';
+      document.getElementById('fab').classList.remove('show');
+      document.getElementById('scan-fab').classList.remove('show');
+      document.getElementById('auth').style.display='flex';
+    }
+  });
+}
+
+function showApp(){
+  document.getElementById('app').style.display='flex';
+  document.getElementById('fab').classList.add('show');
+  document.getElementById('scan-fab').classList.add('show');
+  const email=user?.email||'';
+  const ini=email.slice(0,2).toUpperCase();
+  document.getElementById('av-btn').textContent=ini;
+  document.getElementById('prof-av').textContent=ini;
+  document.getElementById('prof-em').textContent=email;
+  const d=new Date(user?.created_at||Date.now());
+  document.getElementById('prof-si').textContent=`Membre depuis ${d.toLocaleDateString('fr-FR',{month:'long',year:'numeric'})}`;
+}
+
+function switchAuth(m){
+  authMode=m;
+  document.getElementById('tab-login').classList.toggle('active',m==='login');
+  document.getElementById('tab-signup').classList.toggle('active',m==='signup');
+  document.getElementById('auth-btn').textContent=m==='login'?'Se connecter →':'Créer mon compte →';
+  document.getElementById('auth-err').style.display='none';
+  document.getElementById('auth-ok').style.display='none';
+}
+
+async function doAuth(){
+  const email=document.getElementById('a-email').value.trim();
+  const pass=document.getElementById('a-pass').value;
+  const errEl=document.getElementById('auth-err');
+  const okEl=document.getElementById('auth-ok');
+  errEl.style.display='none';okEl.style.display='none';
+  if(!email||!pass){errEl.textContent='Email et mot de passe requis.';errEl.style.display='block';return;}
+  document.getElementById('auth-btn').textContent='…';
+  let result;
+  if(authMode==='login') result=await sb.auth.signInWithPassword({email,password:pass});
+  else result=await sb.auth.signUp({email,password:pass});
+  if(result.error){
+    const msgs={'Invalid login credentials':'Email ou mot de passe incorrect.','User already registered':'Ce compte existe déjà.','Password should be at least 6 characters':'6 caractères minimum.'};
+    errEl.textContent=msgs[result.error.message]||result.error.message;
+    errEl.style.display='block';
+    document.getElementById('auth-btn').textContent=authMode==='login'?'Se connecter →':'Créer mon compte →';
+  }else if(authMode==='signup'&&!result.data?.session){
+    okEl.textContent='Compte créé ! Vérifiez vos emails puis connectez-vous.';
+    okEl.style.display='block';
+    document.getElementById('auth-btn').textContent='Créer mon compte →';
+  }
+}
+
+async function doLogout(){await sb.auth.signOut();document.getElementById('prof-bg').classList.remove('open');}
+
+function sync(s){const p=document.getElementById('pip');p.className='pip'+(s==='busy'?' busy':s==='err'?' err':' ok');}
+
+async function loadData(){
+  sync('busy');
+  try{
+    const [{data:b},{data:n}]=await Promise.all([
+      sb.from('works').select('*').eq('user_id',user.id).order('created_at'),
+      sb.from('notes').select('*').eq('user_id',user.id).order('created_at')
+    ]);
+    books=(b||[]).map(x=>({...x,read:x.read_pages||0}));
+    notes=(n||[]).map(x=>({...x,workId:x.work_id,section:x.type}));
+    sync('ok');renderBiblio();renderStats();
+  }catch(e){sync('err');toast('Erreur de synchronisation');}
+}
+
+function setScreen(s){
+  document.querySelectorAll('.screen').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.ntab').forEach(el=>el.classList.remove('active'));
+  document.getElementById('screen-'+s)?.classList.add('active');
+  document.getElementById('nav-'+s)?.classList.add('active');
+  const showFab=s==='biblio';
+  document.getElementById('fab').classList.toggle('show',showFab);
+  document.getElementById('scan-fab').classList.toggle('show',showFab);
+  if(s==='biblio'){renderBiblio();document.getElementById('ctx').textContent='ma bibliothèque';}
+  if(s==='stats') renderStats();
+  if(s==='ia'){const b=currentBookId?books.find(b=>b.id===currentBookId):null;document.getElementById('ia-ctx').textContent='Analyse : '+(b?b.title:'toutes mes notes');}
+}
+
+function renderBiblio(){
+  const wrap=document.getElementById('books-wrap');
+  wrap.innerHTML='';
+  if(!books.length){wrap.innerHTML='<div class="empty"><div class="ei">📖</div><div class="et">Votre bibliothèque est vide.<br>Ajoutez votre premier livre.</div></div>';}
+  books.forEach((b,i)=>{
+    const cnt=notes.filter(n=>n.workId===b.id).length;
+    const pct=b.pages?Math.min(100,Math.round((b.read||0)/b.pages*100)):0;
+    const color=SPINE[i%SPINE.length];
+    const div=document.createElement('div');
+    div.className='book-card';
+    div.innerHTML=`<div class="book-spine" style="background:${color}"></div><div class="book-cover">${b.cover_url?`<img src="${esc(b.cover_url)}" onerror="this.style.display='none'">`:`<div class="book-cover-ph">${esc(b.title.charAt(0))}</div>`}</div><div class="book-info"><div class="book-title">${esc(b.title)}</div><div class="book-author">${esc(b.author)}</div><div class="book-cat">${esc(b.cat||'')}</div><div class="book-prog-wrap"><div class="book-prog-row"><span>p.${b.read||0}${b.pages?'/'+b.pages:''}</span><span style="color:var(--lime)">${pct}%</span></div><div class="bpb"><div class="bpf" style="width:${pct}%"></div></div></div></div>${cnt?`<div class="book-nbadge">${cnt}</div>`:''}`;
+    const delBtn=document.createElement('button');
+    delBtn.className='book-del-btn';
+    delBtn.textContent='✕ Supprimer';
+    delBtn.onclick=(e)=>{e.stopPropagation();delBook(b.id,b.title);};
+    div.appendChild(delBtn);
+    div.onclick=(e)=>{if(e.target===delBtn) return;openBook(b.id);};
+    wrap.appendChild(div);
+  });
+  const btn=document.createElement('button');
+  btn.className='btn-add-book';
+  btn.innerHTML='<span style="font-size:18px;color:var(--lime)">+</span> Ajouter une œuvre';
+  btn.onclick=openAddBook;
+  wrap.appendChild(btn);
+}
+
+async function delBook(id,title){
+  if(!confirm(`Supprimer "${title}" et toutes ses notes ?`)) return;
+  sync('busy');
+  await sb.from('notes').delete().eq('work_id',id).eq('user_id',user.id);
+  await sb.from('works').delete().eq('id',id).eq('user_id',user.id);
+  books=books.filter(b=>b.id!==id);
+  notes=notes.filter(n=>n.workId!==id);
+  sync('ok');renderBiblio();renderStats();toast('Œuvre supprimée');
+}
+
+function openBook(id){
+  currentBookId=id;
+  const b=books.find(b=>b.id===id);if(!b) return;
+  document.getElementById('book-btitle').textContent=b.title;
+  document.getElementById('ctx').textContent=b.title;
+  renderBookDetail(b);
+  document.querySelectorAll('.screen').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.ntab').forEach(el=>el.classList.remove('active'));
+  document.getElementById('screen-book').classList.add('active');
+  document.getElementById('fab').classList.remove('show');
+  document.getElementById('scan-fab').classList.remove('show');
+}
+
+function closeBook(){
+  currentBookId=null;
+  document.getElementById('ctx').textContent='ma bibliothèque';
+  setScreen('biblio');
+  document.getElementById('fab').classList.add('show');
+  document.getElementById('scan-fab').classList.add('show');
+}
+
+function renderBookDetail(b){
+  const pct=b.pages?Math.min(100,Math.round((b.read||0)/b.pages*100)):0;
+  const bn=notes.filter(n=>n.workId===b.id);
+  let html=`<div class="book-dh"><div class="book-dr"><div class="book-dc">${b.cover_url?`<img src="${esc(b.cover_url)}" onerror="this.parentElement.innerHTML='<div class=\\'book-dc-ph\\'>${esc(b.title.charAt(0))}</div>'">`:`<div class="book-dc-ph">${esc(b.title.charAt(0))}</div>`}</div><div class="book-dm"><div class="book-dt">${esc(b.title)}</div><div class="book-da">${esc(b.author)}</div>${b.cat?`<div class="book-dcat">${esc(b.cat)}${b.year?' · '+b.year:''}</div>`:''}<div class="page-wrap"><span class="pl">p.</span><input class="pi" type="number" value="${b.read||0}" min="0" max="${b.pages||9999}" onchange="updatePage(${b.id},this.value)">${b.pages?`<span class="pt">/ ${b.pages}</span>`:''}</div></div></div></div><div class="book-dprog"><div style="display:flex;align-items:baseline;gap:8px;margin-bottom:4px"><span class="pct-big">${pct}%</span><span class="pct-lbl">lu${b.pages?' · '+b.pages+' pages':''}</span></div><div class="pbar-full"><div class="pbar-fill" style="width:${pct}%"></div></div></div><div class="book-ddesc"><div class="dl">Description</div>${b.description?`<div class="dt">${esc(b.description)}</div>`:`<div class="de">Aucune description.</div>`}<button class="btn-edit" onclick="openDescEdit(${b.id})">✏ Modifier</button></div><div class="secs">`;
+  SECTIONS.forEach(s=>{
+    const items=bn.filter(n=>n.section===s.id);
+    const open=items.length>0;
+    html+=`<div class="sec-block sec-${s.id}" id="sb-${s.id}"><div class="sec-head" onclick="toggleSec('${s.id}')">${s.ico?`<span class="sec-ico">${s.ico}</span>`:''}<span class="sec-name">${s.name}</span>${items.length?`<span class="sec-cnt">${items.length}</span>`:''}<span class="sec-chev ${open?'open':''}" id="sc-${s.id}">▾</span></div><div id="si-${s.id}" style="${open?'':'display:none'}"><div class="sec-items-wrap">`;
+    items.forEach(n=>{html+=`<div class="sec-item">${n.quote?`<div class="sit-quote">"${esc(n.quote)}"</div>`:''}<div class="sit-text">${esc(n.text||'')}</div>${n.page?`<div class="sit-page">p. ${esc(n.page)}</div>`:''}<button class="sit-del" onclick="delNote(${n.id},event)">✕</button></div>`;});
+    html+=`</div><button class="sec-add" onclick="openMini('${s.id}','${s.ico}','${s.name}')">+ Ajouter dans ${s.name}</button></div></div>`;
+  });
+  html+='</div>';
+  document.getElementById('book-content').innerHTML=html;
+}
+
+function toggleSec(id){
+  const el=document.getElementById('si-'+id);
+  const ch=document.getElementById('sc-'+id);
+  const h=el.style.display==='none';
+  el.style.display=h?'':'none';
+  ch.classList.toggle('open',h);
+}
+
+async function updatePage(bookId,val){
+  const b=books.find(b=>b.id===bookId);if(!b) return;
+  b.read=Math.min(parseInt(val)||0,b.pages||999999);
+  sync('busy');
+  await sb.from('works').update({read_pages:b.read}).eq('id',bookId).eq('user_id',user.id);
+  sync('ok');renderBiblio();renderBookDetail(b);toast('Page mise à jour');
+}
+
+function openMini(sectionId,ico,name){
+  currentSection=sectionId;
+  const sec=SECTIONS.find(s=>s.id===sectionId);
+  document.getElementById('mini-ico').textContent=ico;
+  document.getElementById('mini-title').textContent='Ajouter — '+name;
+  let html='';
+  if(sec.fields.includes('quote')){
+    const ph={citations:'Citation exacte…',lexique:'Terme ou mot…',auteurs:'Nom de l\'auteur…',livres:'Titre du livre…'}[sectionId]||'Citation…';
+    html+=`<label class="sl">${sectionId==='lexique'?'Terme':'Citation'}</label><input class="si" id="mini-quote" placeholder="${ph}" style="font-style:italic">`;
+  }
+  if(sec.fields.includes('text')){
+    const ph={notes:'Votre note, réflexion…',citations:'Votre commentaire…',questions:'Votre question…',lexique:'Définition…',auteurs:'Contexte, œuvres…',livres:'Pourquoi ce livre…',inspirations:'Ce qui vous a inspiré…'}[sectionId]||'Note…';
+    html+=`<label class="sl">${sectionId==='lexique'?'Définition':'Note'}</label><textarea class="si" id="mini-text" placeholder="${ph}"></textarea>`;
+  }
+  if(sec.fields.includes('page')){
+    html+=`<label class="sl">Page (optionnel)</label><input class="si" id="mini-page" type="number" placeholder="ex: 42">`;
+  }
+  document.getElementById('mini-fields').innerHTML=html;
+  document.getElementById('mini-bg').classList.add('open');
+  setTimeout(()=>{const f=document.querySelector('#mini-fields .si');if(f) f.focus();},350);
+}
+
+async function saveMiniNote(){
+  if(!currentBookId){toast('Aucun livre sélectionné');return;}
+  if(!currentSection){toast('Aucune section sélectionnée');return;}
+  if(!user){toast('Non connecté');return;}
+  const quoteEl=document.getElementById('mini-quote');
+  const textEl=document.getElementById('mini-text');
+  const pageEl=document.getElementById('mini-page');
+  const text=(textEl?.value||'').trim();
+  const quote=(quoteEl?.value||'').trim();
+  if(!text&&!quote){toast('Ajoutez du contenu');return;}
+  sync('busy');
+  const row={user_id:user.id,work_id:currentBookId,type:currentSection,quote:quote||null,text:text||null,page:pageEl?.value.trim()||null};
+  const {data,error}=await sb.from('notes').insert(row).select().single();
+  if(error){sync('err');toast('Erreur : '+error.message);console.error(error);return;}
+  notes.push({...data,workId:data.work_id,section:data.type});
+  sync('ok');
+  if(quoteEl) quoteEl.value='';
+  if(textEl) textEl.value='';
+  if(pageEl) pageEl.value='';
+  document.getElementById('mini-bg').classList.remove('open');
+  const b=books.find(b=>b.id===currentBookId);
+  if(b) renderBookDetail(b);
+  renderStats();
+  toast('Sauvegardé ✓');
+}
+
+async function delNote(id,e){
+  e.stopPropagation();
+  if(!confirm('Supprimer cette note ?')) return;
+  sync('busy');
+  const {error}=await sb.from('notes').delete().eq('id',id).eq('user_id',user.id);
+  if(error){sync('err');return;}
+  notes=notes.filter(n=>n.id!==id);
+  sync('ok');
+  const b=books.find(b=>b.id===currentBookId);
+  if(b) renderBookDetail(b);
+  renderStats();toast('Supprimé');
+}
+
+function openAddBook(){
+  selectedCoverUrl=null;coverDataUrl=null;
+  const z=document.getElementById('czone');
+  z.innerHTML='<span style="font-size:22px">🖼</span><span class="clbl">Appuyez pour une photo</span><div class="cov-ov"><span style="color:white;font-size:22px">✎</span></div>';
+  document.getElementById('cresults').style.display='none';
+  document.getElementById('cresults').innerHTML='';
+  ['w-title','w-author','w-cat','w-desc','w-pages','w-year','cov-search'].forEach(id=>{const el=document.getElementById(id);if(el) el.value='';});
+  document.getElementById('add-book-bg').classList.add('open');
+  setTimeout(()=>document.getElementById('w-title').focus(),350);
+}
+
+function handleCovFile(e){
+  const file=e.target.files[0];if(!file) return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    coverDataUrl=ev.target.result;selectedCoverUrl=null;
+    const z=document.getElementById('czone');
+    z.innerHTML=`<img class="cprev" src="${coverDataUrl}"><div class="cov-ov"><span style="color:white;font-size:22px">✎</span></div>`;
+  };
+  reader.readAsDataURL(file);
+}
+
+async function searchCover(){
+  const q=document.getElementById('cov-search').value.trim();if(!q) return;
+  const res=document.getElementById('cresults');
+  res.innerHTML='<span style="font-size:12px;color:var(--fg3);padding:4px;font-family:var(--syne);font-weight:600">Recherche…</span>';
+  res.style.display='flex';
+  try{
+    const r=await fetch(`https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(q)}&maxResults=6&fields=items(volumeInfo(imageLinks,title))`);
+    const d=await r.json();
+    const items=(d.items||[]).filter(it=>it.volumeInfo?.imageLinks);
+    if(!items.length){res.innerHTML='<span style="font-size:12px;color:var(--fg3);padding:4px;font-family:var(--syne);font-weight:600">Aucune couverture trouvée</span>';return;}
+    res.innerHTML='';
+    items.forEach(it=>{
+      const url=(it.volumeInfo.imageLinks.thumbnail||it.volumeInfo.imageLinks.smallThumbnail||'').replace('zoom=1','zoom=2').replace('http:','https:');
+      const div=document.createElement('div');
+      div.className='cthumb';
+      div.innerHTML=`<img src="${url}" onerror="this.parentElement.style.display='none'">`;
+      div.onclick=()=>{
+        document.querySelectorAll('.cthumb').forEach(t=>t.classList.remove('sel'));
+        div.classList.add('sel');selectedCoverUrl=url;coverDataUrl=null;
+        const z=document.getElementById('czone');
+        z.innerHTML=`<img class="cprev" src="${url}"><div class="cov-ov"><span style="color:white;font-size:22px">✎</span></div>`;
+      };
+      res.appendChild(div);
+    });
+  }catch(e){res.innerHTML='<span style="color:var(--red);font-size:12px;padding:4px">Erreur de recherche</span>';}
+}
+
+async function addBook(){
+  const title=document.getElementById('w-title').value.trim();
+  const author=document.getElementById('w-author').value.trim();
+  if(!title||!author){toast('Titre et auteur requis');return;}
+  if(!user){toast('Non connecté');return;}
+  sync('busy');
+  let coverUrl=selectedCoverUrl||null;
+  if(coverDataUrl&&!coverUrl){
+    try{
+      const fn=`cover_${user.id}_${Date.now()}.jpg`;
+      const base64=coverDataUrl.split(',')[1];
+      const bytes=Uint8Array.from(atob(base64),c=>c.charCodeAt(0));
+      const {data:up}=await sb.storage.from('covers').upload(fn,bytes,{contentType:'image/jpeg',upsert:true});
+      if(up){const {data:pu}=sb.storage.from('covers').getPublicUrl(fn);coverUrl=pu?.publicUrl||null;}
+    }catch(e){console.warn('Cover upload failed',e);}
+  }
+  const row={user_id:user.id,title,author,cat:document.getElementById('w-cat').value.trim()||'Divers',description:document.getElementById('w-desc').value.trim()||null,pages:parseInt(document.getElementById('w-pages').value)||0,year:document.getElementById('w-year').value.trim()||null,read_pages:0,cover_url:coverUrl};
+  const {data,error}=await sb.from('works').insert(row).select().single();
+  if(error){sync('err');toast('Erreur : '+error.message);console.error(error);return;}
+  books.push({...data,read:0});
+  sync('ok');
+  document.getElementById('add-book-bg').classList.remove('open');
+  renderBiblio();toast(`"${title}" ajouté !`);
+}
+
+function openDescEdit(bookId){
+  const b=books.find(b=>b.id===bookId);
+  document.getElementById('desc-inp').value=b?.description||'';
+  document.getElementById('desc-bg').classList.add('open');
+  setTimeout(()=>document.getElementById('desc-inp').focus(),300);
+}
+
+async function saveDesc(){
+  const b=books.find(b=>b.id===currentBookId);if(!b) return;
+  const desc=document.getElementById('desc-inp').value.trim();
+  sync('busy');
+  await sb.from('works').update({description:desc}).eq('id',b.id).eq('user_id',user.id);
+  b.description=desc;sync('ok');
+  document.getElementById('desc-bg').classList.remove('open');
+  renderBookDetail(b);toast('Description mise à jour');
+}
+
+// ── SCAN ──
+function openScan(){
+  scanImageBase64=null;scanResults=[];
+  const sel=document.getElementById('scan-book-sel');
+  sel.innerHTML='<option value="">Choisir un livre…</option>';
+  books.forEach(b=>{const o=document.createElement('option');o.value=b.id;o.textContent=b.title;if(b.id===currentBookId) o.selected=true;sel.appendChild(o);});
+  const z=document.getElementById('scan-zone');
+  z.innerHTML='<span style="font-size:22px">📸</span><span class="clbl">Prendre une photo de la page</span><div class="cov-ov"><span style="color:white;font-size:22px">📷</span></div>';
+  document.getElementById('scan-analyze-btn').style.display='none';
+  document.getElementById('scan-save-all-btn').style.display='none';
+  document.getElementById('scan-results-area').innerHTML='';
+  document.getElementById('scan-bg').classList.add('open');
+}
+
+function handleScanFile(e){
+  const file=e.target.files[0];if(!file) return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    scanImageBase64=ev.target.result;
+    const z=document.getElementById('scan-zone');
+    z.innerHTML=`<img class="cprev" src="${scanImageBase64}"><div class="cov-ov"><span style="color:white;font-size:22px">📷</span></div>`;
+    document.getElementById('scan-analyze-btn').style.display='block';
+  };
+  reader.readAsDataURL(file);
+}
+
+async function analyzeScan(){
+  const key=apiKey||localStorage.getItem('lect_key')||'';
+  if(!key){toast('Entrez votre clé API Anthropic dans l\'onglet IA');return;}
+  const bookSel=document.getElementById('scan-book-sel').value;
+  if(!bookSel){toast('Choisissez un livre');return;}
+  if(!scanImageBase64){toast('Prenez d\'abord une photo');return;}
+  scanBookId=parseInt(bookSel);
+  const area=document.getElementById('scan-results-area');
+  area.innerHTML=`<div class="scan-loading">🔍 Analyse de la page en cours…<br><span style="font-size:11px;color:var(--lime);margin-top:8px;display:block">Identification des surlignages</span></div>`;
+  document.getElementById('scan-analyze-btn').style.display='none';
+  const base64=scanImageBase64.split(',')[1];
+  const mediaType=scanImageBase64.split(';')[0].split(':')[1]||'image/jpeg';
+  const book=books.find(b=>b.id===scanBookId);
+  const prompt=`Tu es un assistant de lecture intelligent. Analyse cette photo d'une page de livre.
+
+Identifie TOUS les textes qui semblent surlignés, encerclés, soulignés ou annotés.
+
+Pour chaque élément identifié, classe-le selon ces règles STRICTES :
+- Un seul mot isolé → section "lexique" : cherche sur le web la définition exacte et officielle (dictionnaire)
+- Une phrase ENTRE GUILLEMETS → section "citations" : cherche sur le web l'auteur de cette citation si elle ne lui appartient pas au livre
+- Une phrase SANS guillemets → section "notes"  
+- Un titre de livre ou d'œuvre → section "livres"
+- Un nom d'auteur, philosophe, scientifique ou personnage historique → section "auteurs"
+- Une idée inspirante sans être une citation → section "inspirations"
+- Une question ou interrogation → section "questions"
+
+Réponds UNIQUEMENT avec un JSON valide, sans markdown, sans backticks :
+{"items":[{"section":"lexique","quote":"le mot exact","text":"définition officielle complète du dictionnaire"},{"section":"citations","quote":"la citation exacte","text":"contexte ou commentaire","author":"nom de l'auteur si trouvé"}]}
+
+Si tu ne trouves aucun texte surligné ou annoté, réponds : {"items":[]}
+Le livre analysé est : "${book?.title||'inconnu'}" de ${book?.author||'auteur inconnu'}.`;
+
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({
+        model:'claude-opus-4-5',
+        max_tokens:2000,
+        tools:[{type:'web_search_20250305',name:'web_search'}],
+        messages:[{role:'user',content:[
+          {type:'image',source:{type:'base64',media_type:mediaType,data:base64}},
+          {type:'text',text:prompt}
+        ]}]
+      })
+    });
+    if(!res.ok){const e=await res.json();throw new Error(e.error?.message||'Erreur API');}
+    const data=await res.json();
+    const textBlocks=data.content?.filter(c=>c.type==='text').map(c=>c.text)||[];
+    const fullText=textBlocks.join('');
+    let parsed;
+    try{
+      const jsonMatch=fullText.match(/\{[\s\S]*\}/);
+      parsed=JSON.parse(jsonMatch?jsonMatch[0]:'{}');
+    }catch(e){throw new Error('Impossible de parser la réponse IA');}
+    scanResults=parsed.items||[];
+    if(!scanResults.length){area.innerHTML='<div class="scan-loading" style="color:var(--fg3)">Aucun texte surligné détecté.<br><span style="font-size:11px">Essayez avec une photo plus nette.</span></div>';document.getElementById('scan-analyze-btn').style.display='block';return;}
+    renderScanResults();
+    document.getElementById('scan-save-all-btn').style.display='block';
+  }catch(e){
+    area.innerHTML=`<div class="scan-loading" style="color:var(--red)">Erreur : ${esc(e.message)}</div>`;
+    document.getElementById('scan-analyze-btn').style.display='block';
+  }
+}
+
+function renderScanResults(){
+  const area=document.getElementById('scan-results-area');
+  const sec=SECTIONS.find(s=>s);
+  area.innerHTML=`<div class="scan-step">${scanResults.length} élément${scanResults.length>1?'s':''} détecté${scanResults.length>1?'s':''}</div>`;
+  scanResults.forEach((item,i)=>{
+    const s=SECTIONS.find(s=>s.id===item.section)||SECTIONS[0];
+    const div=document.createElement('div');
+    div.className='scan-result-item';
+    div.id='sri-'+i;
+    div.innerHTML=`<span class="sri-tag sri-${item.section}">${s.name}</span>${item.quote?`<div class="sri-quote">"${esc(item.quote)}"</div>`:''}<div class="sri-text">${esc(item.text||'')}${item.author?` <span style="color:var(--lime);font-size:12px">— ${esc(item.author)}</span>`:''}</div><button class="sri-del" onclick="removeScanItem(${i})">✕</button>`;
+    area.appendChild(div);
+  });
+}
+
+function removeScanItem(i){
+  scanResults.splice(i,1);
+  renderScanResults();
+  if(!scanResults.length) document.getElementById('scan-save-all-btn').style.display='none';
+}
+
+async function saveAllScanResults(){
+  if(!scanResults.length||!scanBookId||!user){return;}
+  sync('busy');
+  let saved=0;
+  for(const item of scanResults){
+    const row={user_id:user.id,work_id:scanBookId,type:item.section||'notes',quote:item.quote||null,text:item.text||null,page:null};
+    const {data,error}=await sb.from('notes').insert(row).select().single();
+    if(!error&&data){notes.push({...data,workId:data.work_id,section:data.type});saved++;}
+  }
+  sync('ok');
+  document.getElementById('scan-bg').classList.remove('open');
+  const b=books.find(b=>b.id===scanBookId);
+  if(b&&currentBookId===scanBookId) renderBookDetail(b);
+  renderStats();renderBiblio();
+  toast(`${saved} élément${saved>1?'s':''} sauvegardé${saved>1?'s':''} ✓`);
+}
+
+function renderStats(){
+  const wrap=document.getElementById('sw');
+  const total=notes.length;
+  const by=id=>notes.filter(n=>n.section===id).length;
+  const colors={notes:'#5ABABA',citations:'#C8FF57',questions:'#FF6B6B',lexique:'#B4A0FF',auteurs:'#FFB347',livres:'#87CEEB',inspirations:'#FF8FA3'};
+  let html=`<div class="sg"><div class="sc"><div class="sn">${total}</div><div class="sl2">Notes</div></div><div class="sc"><div class="sn">${books.length}</div><div class="sl2">Œuvres</div></div><div class="sc"><div class="sn">${by('citations')}</div><div class="sl2">Citations</div></div><div class="sc"><div class="sn">${by('lexique')}</div><div class="sl2">Lexique</div></div></div><div class="bc"><div class="bt">Répartition</div>`;
+  SECTIONS.forEach(s=>{const n=by(s.id);const pct=total?Math.round(n/total*100):0;html+=`<div class="brw"><div class="brl">${s.ico} ${s.name}</div><div class="brt"><div class="brf" style="width:${pct}%;background:${colors[s.id]||'#888'}"></div></div><div class="brn">${n}</div></div>`;});
+  html+='</div>';
+  if(books.length){html+='<div class="bc"><div class="bt">Avancement</div>';books.forEach(b=>{const pct=b.pages?Math.min(100,Math.round((b.read||0)/b.pages*100)):0;html+=`<div style="margin-bottom:14px"><div style="display:flex;justify-content:space-between;font-family:var(--syne);font-size:12px;font-weight:600;color:var(--fg2);margin-bottom:5px"><span>${esc(b.title)}</span><span style="color:var(--lime)">${pct}%</span></div><div class="brt" style="height:4px"><div class="brf" style="width:${pct}%;background:var(--lime)"></div></div></div>`;});html+='</div>';}
+  wrap.innerHTML=html;
+}
+
+function saveKey(){apiKey=document.getElementById('api-key').value.trim();localStorage.setItem('lect_key',apiKey);toast('Clé API sauvegardée');}
+
+async function aiDo(action){
+  const key=apiKey||localStorage.getItem('lect_key')||'';
+  if(!key){toast('Entrez votre clé API Anthropic');return;}
+  const scope=currentBookId?notes.filter(n=>n.workId===currentBookId):notes;
+  if(!scope.length){toast('Aucune note à analyser');return;}
+  const b=currentBookId?books.find(b=>b.id===currentBookId):null;
+  document.getElementById('ai-think').style.display='block';
+  document.getElementById('ai-result').innerHTML='';
+  const notesText=SECTIONS.map(s=>{const items=scope.filter(n=>n.section===s.id);if(!items.length) return '';return `[${s.name}]\n${items.map(n=>`${n.quote?'"'+n.quote+'" ':''}${n.text||''}${n.page?' (p.'+n.page+')':''}`.trim()).join('\n')}`;}).filter(Boolean).join('\n\n');
+  const ctx=b?`Œuvre : "${b.title}" de ${b.author}.\n\n`:'';
+  const prompts={résumé:`${ctx}Notes:\n\n${notesText}\n\nFais un résumé synthétique en 150-200 mots. Style académique, en français.`,thèmes:`${ctx}Notes:\n\n${notesText}\n\nDégage 3-5 thèmes conceptuels. Pour chaque : titre + explication.`,questions:`${ctx}Questions:\n${scope.filter(n=>n.section==='questions').map(n=>n.text).join('\n')}\n\nApprofondis avec des pistes de réflexion.`,fiche:`${ctx}Notes:\n\n${notesText}\n\nFiche : 1) Thèse 2) Concepts clés 3) Arguments 4) Limites. Max 300 mots.`,critique:`${ctx}Notes:\n\n${notesText}\n\nAnalyse critique : points forts, limites, perspectives. ~250 mots.`,lexique:`${ctx}Lexique:\n${scope.filter(n=>n.section==='lexique').map(n=>(n.quote||'')+': '+(n.text||'')).join('\n')}\n\nEnrichis et contextualise chaque terme.`};
+  const titles={résumé:'Résumé synthétique',thèmes:'Thèmes dégagés',questions:'Approfondissement',fiche:'Fiche de lecture',critique:'Analyse critique',lexique:'Lexique enrichi'};
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-opus-4-5',max_tokens:1000,messages:[{role:'user',content:prompts[action]}]})});
+    if(!res.ok){const e=await res.json();throw new Error(e.error?.message||'Erreur');}
+    const data=await res.json();
+    const text=data.content?.map(c=>c.text||'').join('')||'Pas de réponse.';
+    document.getElementById('ai-result').innerHTML=`<div class="ai-rc"><div class="ai-rt">${titles[action]}</div><div class="ai-rb">${fmtAI(text)}</div></div>`;
+  }catch(e){document.getElementById('ai-result').innerHTML=`<div class="ai-rc"><div class="ai-rb" style="color:var(--red)">Erreur : ${esc(e.message)}</div></div>`;}
+  document.getElementById('ai-think').style.display='none';
+}
+
+function openProf(){document.getElementById('prof-bg').classList.add('open');}
+function toggleTheme(){
+  const th=localStorage.getItem('lect_th')||'dark';
+  const next=th==='dark'?'light':'dark';
+  localStorage.setItem('lect_th',next);
+  document.documentElement.setAttribute('data-theme',next);
+}
+function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function fmtAI(t){return esc(t).replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\*(.*?)\*/g,'<em>$1</em>').replace(/\n\n/g,'</p><p>').replace(/\n/g,'<br>').replace(/^/,'<p>').concat('</p>');}
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2600);}
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='a-pass') doAuth();});
+
+/* Light mode overrides */
+const lightCSS=`[data-theme="light"]{--bg:#F8F6F2;--bg2:#FFFFFF;--bg3:#F0EDE8;--bg4:#E8E4DE;--fg:#1A1612;--fg2:#4A4540;--fg3:#8A8480;--border:rgba(26,22,18,0.1);--border2:rgba(26,22,18,0.18);--shadow:0 4px 24px rgba(0,0,0,0.08);--lime:#2D7A2D;--lime2:#1F5C1F;--red:#CC3333;--red-bg:rgba(204,51,51,0.08);--border-lime:rgba(45,122,45,0.25)}`;
+const style=document.createElement('style');style.textContent=lightCSS;document.head.appendChild(style);
+
+init();
+</script>
+</body>
+</html>
